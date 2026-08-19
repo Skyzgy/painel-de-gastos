@@ -11,14 +11,38 @@ const CATEGORIAS = {
 
 function carregarEstado() {
   const salvo = localStorage.getItem(CHAVE_STORAGE);
+  let estado = null;
   if (salvo) {
     try {
-      return JSON.parse(salvo);
+      estado = JSON.parse(salvo);
     } catch (e) {
       // ignora storage corrompido e recomeça
     }
   }
-  return { salario: 1700, gastos: [] };
+  if (!estado) estado = { salario: 1700, gastos: [] };
+  if (!estado.periodo) {
+    const agora = new Date();
+    estado.periodo = { mes: agora.getMonth(), ano: agora.getFullYear() };
+  }
+  return estado;
+}
+
+function formatarMesAno(periodo) {
+  const nome = new Date(periodo.ano, periodo.mes, 1).toLocaleDateString("pt-BR", {
+    month: "long",
+    year: "numeric",
+  });
+  return nome.charAt(0).toUpperCase() + nome.slice(1);
+}
+
+// Reconhece contas no formato "N/M nome" (parcela N de M) para avançar a contagem a cada mês.
+function avancarParcelaNoNome(nome) {
+  const match = nome.match(/^(\d+)\/(\d+)(.*)$/);
+  if (!match) return nome;
+  const atual = parseInt(match[1], 10);
+  const total = parseInt(match[2], 10);
+  const novoAtual = Math.min(atual + 1, total);
+  return `${novoAtual}/${total}${match[3]}`;
 }
 
 let estado = carregarEstado();
@@ -59,6 +83,7 @@ const btnExcluir = document.getElementById("btnExcluir");
 const formTitulo = document.getElementById("formTitulo");
 
 function render() {
+  elMes.textContent = formatarMesAno(estado.periodo);
   elSalario.value = estado.salario;
 
   const totalFixo = estado.gastos.reduce((soma, g) => soma + g.valor, 0);
@@ -100,6 +125,11 @@ function render() {
 
     const metaPartes = [`<span class="categoria-badge">${CATEGORIAS[gasto.categoria] || "Outros"}</span>`];
     if (gasto.dia) metaPartes.push(`vence dia ${gasto.dia}`);
+
+    const parcela = gasto.nome.match(/^(\d+)\/(\d+)/);
+    if (parcela && parcela[1] === parcela[2]) {
+      metaPartes.push(`<span class="categoria-badge badge-fim">Última parcela</span>`);
+    }
 
     li.innerHTML = `
       <button class="check-pago" data-acao="pago" aria-label="Marcar como pago">${gasto.pago ? "✓" : ""}</button>
@@ -238,8 +268,23 @@ inputImportar.addEventListener("change", () => {
   inputImportar.value = "";
 });
 
-// --- mês atual ---
-const nomeMes = new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
-elMes.textContent = nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1);
+// --- virar o mês ---
+document.getElementById("btnAvancarMes").addEventListener("click", () => {
+  const proximo = new Date(estado.periodo.ano, estado.periodo.mes + 1, 1);
+  const nomeProximo = formatarMesAno({ mes: proximo.getMonth(), ano: proximo.getFullYear() });
+
+  const confirmou = confirm(
+    `Virar para ${nomeProximo}?\n\nAs parcelas (ex: 1/10) avançam um número e todas as contas voltam a ficar como "a pagar".`
+  );
+  if (!confirmou) return;
+
+  estado.periodo = { mes: proximo.getMonth(), ano: proximo.getFullYear() };
+  for (const gasto of estado.gastos) {
+    gasto.nome = avancarParcelaNoNome(gasto.nome);
+    gasto.pago = false;
+  }
+  salvarEstado();
+  render();
+});
 
 render();

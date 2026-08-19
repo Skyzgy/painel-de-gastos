@@ -40,10 +40,33 @@ body {
   font-weight: 700;
 }
 
+.periodo-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+
 .mes {
-  margin: 4px 0 0;
+  margin: 0;
   color: var(--texto-fraco);
   font-size: 0.85rem;
+}
+
+.btn-periodo {
+  background: transparent;
+  border: 1px solid var(--linha);
+  color: var(--texto-fraco);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 0.72rem;
+  font-family: inherit;
+}
+
+.btn-periodo:active {
+  border-color: var(--azul);
+  color: var(--azul);
 }
 
 .container {
@@ -256,6 +279,11 @@ body {
   border-radius: 20px;
   font-size: 0.7rem;
   background: var(--bg-card-2);
+}
+
+.badge-fim {
+  background: var(--verde-fraco);
+  color: var(--verde);
 }
 
 .item-valor {
