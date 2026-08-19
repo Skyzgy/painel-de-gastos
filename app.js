@@ -107,7 +107,7 @@ function render() {
         <div class="item-nome">${escapeHtml(gasto.nome)}</div>
         <div class="item-meta">${metaPartes.join(" · ")}</div>
       </div>
-      <div class="item-valor" data-acao="editar">${formatarMoeda(gasto.valor)}</div>
+      <div class="item-valor numero" data-acao="editar">${formatarMoeda(gasto.valor)}</div>
     `;
     elLista.appendChild(li);
   }
