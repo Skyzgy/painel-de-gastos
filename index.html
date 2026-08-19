@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#10151c">
+<title>Painel de Gastos</title>
+
+<!-- Ícone e comportamento de app ao adicionar à tela inicial -->
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Gastos">
+<meta name="mobile-web-app-capable" content="yes">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Sora:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <h1>Painel de Gastos</h1>
+  <div class="periodo-row">
+    <p class="mes" id="mesAtual"></p>
+    <button class="btn-periodo" id="btnAvancarMes" type="button">Virar mês →</button>
+  </div>
+</header>
+
+<main class="container">
+
+  <section class="cards-resumo">
+    <div class="card card-salario">
+      <span class="card-label">Salário</span>
+      <div class="salario-edit">
+        <span class="prefixo numero">R$</span>
+        <input type="number" class="numero" id="inputSalario" step="0.01" inputmode="decimal">
+      </div>
+    </div>
+
+    <div class="card card-fixo">
+      <span class="card-label">Contas do mês</span>
+      <span class="card-valor numero" id="totalFixo">R$ 0,00</span>
+      <span class="card-sub" id="percentComprometido">0% do salário</span>
+    </div>
+
+    <div class="card card-livre" id="cardLivre">
+      <span class="card-label">Livre pra bobeira</span>
+      <span class="card-valor numero" id="totalLivre">R$ 0,00</span>
+      <span class="card-sub" id="statusLivre"></span>
+    </div>
+  </section>
+
+  <div class="barra-wrap">
+    <div class="barra-fundo">
+      <div class="barra-progresso" id="barraProgresso"></div>
+    </div>
+    <div class="barra-legenda">
+      <span><i class="dot dot-pago"></i>Pago</span>
+      <span><i class="dot dot-pendente"></i>A pagar</span>
+      <span><i class="dot dot-livre"></i>Livre</span>
+    </div>
+  </div>
+
+  <section class="lista-header">
+    <h2>Contas do mês</h2>
+    <button class="btn-add" id="btnAbrirForm">+ Adicionar</button>
+  </section>
+
+  <ul class="lista-gastos" id="listaGastos"></ul>
+  <p class="vazio" id="msgVazio">Nenhuma conta cadastrada ainda. Toque em "+ Adicionar" para começar.</p>
+
+  <section class="lista-header">
+    <h2>Próximos meses</h2>
+  </section>
+  <div class="lista-futuros" id="listaFuturos"></div>
+
+  <section class="backup">
+    <button class="btn-secundario" id="btnExportar">Exportar backup</button>
+    <button class="btn-secundario" id="btnImportar">Importar backup</button>
+    <input type="file" id="inputImportar" accept="application/json" hidden>
+  </section>
+
+</main>
+
+<div class="modal-fundo" id="modalFundo">
+  <form class="modal" id="formGasto">
+    <h2 id="formTitulo">Nova conta</h2>
+
+    <label>Nome
+      <input type="text" id="fNome" placeholder="Ex: Aluguel" required>
+    </label>
+
+    <label>Valor
+      <input type="number" class="numero" id="fValor" step="0.01" min="0" inputmode="decimal" placeholder="0,00" required>
+    </label>
+
+    <label>Dia do vencimento (opcional)
+      <input type="number" id="fDia" min="1" max="31" placeholder="Ex: 10">
+    </label>
+
+    <label>Categoria
+      <select id="fCategoria">
+        <option value="moradia">Moradia</option>
+        <option value="contas">Contas (água, luz, internet)</option>
+        <option value="transporte">Transporte</option>
+        <option value="alimentacao">Alimentação</option>
+        <option value="assinaturas">Assinaturas</option>
+        <option value="outros" selected>Outros</option>
+      </select>
+    </label>
+
+    <label class="check-linha">
+      <input type="checkbox" id="fPago">
+      Já paguei essa conta
+    </label>
+
+    <div class="modal-botoes">
+      <button type="button" class="btn-secundario" id="btnCancelar">Cancelar</button>
+      <button type="submit" class="btn-primario">Salvar</button>
+    </div>
+    <button type="button" class="btn-excluir" id="btnExcluir" hidden>Excluir conta</button>
+  </form>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
