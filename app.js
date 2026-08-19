@@ -45,6 +45,19 @@ function avancarParcelaNoNome(nome) {
   return `${novoAtual}/${total}${match[3]}`;
 }
 
+const MESES_FUTUROS = 6;
+
+// Projeta como uma conta ficaria "passos" meses adiante: avança a parcela no nome
+// e informa se a conta já teria acabado (parcela passou do total) nesse mês futuro.
+function projetarGasto(nome, passos) {
+  const match = nome.match(/^(\d+)\/(\d+)(.*)$/);
+  if (!match) return { nome, acabou: false, ultimaParcela: false };
+  const total = parseInt(match[2], 10);
+  const projetado = parseInt(match[1], 10) + passos;
+  if (projetado > total) return { nome, acabou: true, ultimaParcela: false };
+  return { nome: `${projetado}/${total}${match[3]}`, acabou: false, ultimaParcela: projetado === total };
+}
+
 let estado = carregarEstado();
 let idEditando = null;
 
@@ -70,6 +83,7 @@ const elCardLivre = document.getElementById("cardLivre");
 const elBarra = document.getElementById("barraProgresso");
 const elLista = document.getElementById("listaGastos");
 const elVazio = document.getElementById("msgVazio");
+const elFuturos = document.getElementById("listaFuturos");
 const elMes = document.getElementById("mesAtual");
 
 const modalFundo = document.getElementById("modalFundo");
@@ -140,6 +154,52 @@ function render() {
       <div class="item-valor numero" data-acao="editar">${formatarMoeda(gasto.valor)}</div>
     `;
     elLista.appendChild(li);
+  }
+
+  renderFuturos();
+}
+
+function renderFuturos() {
+  elFuturos.innerHTML = "";
+
+  for (let passos = 1; passos <= MESES_FUTUROS; passos++) {
+    const data = new Date(estado.periodo.ano, estado.periodo.mes + passos, 1);
+    const periodoFuturo = { mes: data.getMonth(), ano: data.getFullYear() };
+
+    const itens = estado.gastos
+      .map((g) => ({ ...g, proj: projetarGasto(g.nome, passos) }))
+      .filter((g) => !g.proj.acabou);
+
+    const totalFixoFuturo = itens.reduce((soma, g) => soma + g.valor, 0);
+    const livreFuturo = estado.salario - totalFixoFuturo;
+
+    const details = document.createElement("details");
+    details.className = "futuro-mes";
+    details.innerHTML = `
+      <summary>
+        <span class="futuro-label">${formatarMesAno(periodoFuturo)}</span>
+        <span class="futuro-valores">
+          <span class="numero">${formatarMoeda(totalFixoFuturo)}</span>
+          <span class="numero futuro-livre${livreFuturo < 0 ? " negativo" : ""}">${formatarMoeda(livreFuturo)}</span>
+        </span>
+      </summary>
+      <ul class="futuro-lista">
+        ${
+          itens.length
+            ? itens
+                .map(
+                  (g) => `
+          <li>
+            <span>${escapeHtml(g.proj.nome)}${g.proj.ultimaParcela ? ' <span class="categoria-badge badge-fim">Última parcela</span>' : ""}</span>
+            <span class="numero">${formatarMoeda(g.valor)}</span>
+          </li>`
+                )
+                .join("")
+            : '<li class="futuro-vazia">Nenhuma conta fixa prevista</li>'
+        }
+      </ul>
+    `;
+    elFuturos.appendChild(details);
   }
 }
 
