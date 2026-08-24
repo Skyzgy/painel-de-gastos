@@ -356,6 +356,24 @@ function extrairDia(dataStr) {
   return null;
 }
 
+// Valores do Nubank vem em formato BR: virgula decimal, ponto de milhar,
+// e as vezes um espaco depois do sinal de negativo (ex: "- 1.863,81").
+function parseValorNubank(str) {
+  if (!str) return NaN;
+  const limpo = str.trim().replace(/^-\s+/, "-").replace(/\./g, "").replace(",", ".");
+  return parseFloat(limpo);
+}
+
+// O Nubank descreve parcelas como sufixo ("Nome - Parcela 1/3"); o painel
+// reconhece parcelas como prefixo ("1/3 Nome") para poder avança-las ao
+// virar o mes, entao a gente reordena aqui.
+function normalizarNomeParcela(nome) {
+  const match = nome.match(/^(.*?)\s*-?\s*Parcela\s+(\d+)\/(\d+)\s*$/i);
+  if (!match) return nome;
+  const [, resto, atual, total] = match;
+  return `${atual}/${total} ${resto}`;
+}
+
 // Reconhece os dois formatos de extrato exportados pelo Nubank: conta
 // (Data,Valor,Identificador,Descrição) e fatura do cartão (date,title,amount).
 function parsearExtratoNubank(texto) {
@@ -371,10 +389,10 @@ function parsearExtratoNubank(texto) {
     const idxDescricao = cabecalho.findIndex((c) => c.startsWith("descri"));
     for (const linha of linhas.slice(1)) {
       const campos = dividirLinhaCsv(linha);
-      const valor = parseFloat(campos[idxValor]);
+      const valor = parseValorNubank(campos[idxValor]);
       if (isNaN(valor) || valor >= 0) continue;
       lancamentos.push({
-        nome: campos[idxDescricao] || "Lançamento",
+        nome: normalizarNomeParcela(campos[idxDescricao] || "Lançamento"),
         valor: Math.abs(valor),
         dia: extrairDia(campos[idxData] || ""),
       });
@@ -385,10 +403,10 @@ function parsearExtratoNubank(texto) {
     const idxAmount = cabecalho.indexOf("amount");
     for (const linha of linhas.slice(1)) {
       const campos = dividirLinhaCsv(linha);
-      const valor = parseFloat(campos[idxAmount]);
+      const valor = parseValorNubank(campos[idxAmount]);
       if (isNaN(valor) || valor <= 0) continue;
       lancamentos.push({
-        nome: campos[idxTitle] || "Lançamento",
+        nome: normalizarNomeParcela(campos[idxTitle] || "Lançamento"),
         valor,
         dia: extrairDia(campos[idxDate] || ""),
       });
