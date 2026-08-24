@@ -453,6 +453,13 @@ inputExtrato.addEventListener("change", () => {
   inputExtrato.value = "";
 });
 
+document.getElementById("btnLimparContas").addEventListener("click", () => {
+  if (!confirm("Excluir todas as contas cadastradas? O salário e o mês atual não mudam.")) return;
+  estado.gastos = [];
+  salvarEstado();
+  render();
+});
+
 // --- virar o mês ---
 document.getElementById("btnAvancarMes").addEventListener("click", () => {
   const proximo = new Date(estado.periodo.ano, estado.periodo.mes + 1, 1);

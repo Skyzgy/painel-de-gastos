@@ -392,6 +392,10 @@ body {
   min-width: 140px;
 }
 
+.btn-perigo {
+  color: var(--vermelho);
+}
+
 .btn-secundario {
   flex: 1;
   background: var(--bg-card);
