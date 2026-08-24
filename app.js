@@ -20,6 +20,7 @@ function carregarEstado() {
     }
   }
   if (!estado) estado = { salario: 1700, gastos: [] };
+  if (typeof estado.metaEconomia !== "number") estado.metaEconomia = 0;
   if (!estado.periodo) {
     const agora = new Date();
     estado.periodo = { mes: agora.getMonth(), ano: agora.getFullYear() };
@@ -75,16 +76,21 @@ function gerarId() {
 
 // --- elementos ---
 const elSalario = document.getElementById("inputSalario");
+const elMeta = document.getElementById("inputMeta");
 const elTotalFixo = document.getElementById("totalFixo");
 const elPercent = document.getElementById("percentComprometido");
 const elTotalLivre = document.getElementById("totalLivre");
 const elStatusLivre = document.getElementById("statusLivre");
 const elCardLivre = document.getElementById("cardLivre");
 const elBarra = document.getElementById("barraProgresso");
+const elBarraBobeira = document.getElementById("barraBobeira");
+const elBobeiraValores = document.getElementById("bobeiraValores");
 const elLista = document.getElementById("listaGastos");
 const elVazio = document.getElementById("msgVazio");
 const elFuturos = document.getElementById("listaFuturos");
 const elMes = document.getElementById("mesAtual");
+
+const ehAvulso = (gasto) => gasto.recorrente === false;
 
 const modalFundo = document.getElementById("modalFundo");
 const formGasto = document.getElementById("formGasto");
@@ -99,21 +105,28 @@ const formTitulo = document.getElementById("formTitulo");
 function render() {
   elMes.textContent = formatarMesAno(estado.periodo);
   elSalario.value = estado.salario;
+  elMeta.value = estado.metaEconomia;
 
-  const totalFixo = estado.gastos.reduce((soma, g) => soma + g.valor, 0);
-  const totalPago = estado.gastos.filter((g) => g.pago).reduce((s, g) => s + g.valor, 0);
+  const gastosFixos = estado.gastos.filter((g) => !ehAvulso(g));
+  const gastosAvulsos = estado.gastos.filter(ehAvulso);
+
+  const totalFixo = gastosFixos.reduce((soma, g) => soma + g.valor, 0);
+  const totalPago = gastosFixos.filter((g) => g.pago).reduce((s, g) => s + g.valor, 0);
   const totalPendente = totalFixo - totalPago;
-  const livre = estado.salario - totalFixo;
+  const totalAvulso = gastosAvulsos.reduce((soma, g) => soma + g.valor, 0);
+
+  const orcamentoBobeira = estado.salario - totalFixo - estado.metaEconomia;
+  const sobraBobeira = orcamentoBobeira - totalAvulso;
   const percent = estado.salario > 0 ? (totalFixo / estado.salario) * 100 : 0;
 
   elTotalFixo.textContent = formatarMoeda(totalFixo);
   elPercent.textContent = `${percent.toFixed(0)}% do salário`;
 
-  elTotalLivre.textContent = formatarMoeda(livre);
-  elCardLivre.classList.toggle("negativo", livre < 0);
+  elTotalLivre.textContent = formatarMoeda(sobraBobeira);
+  elCardLivre.classList.toggle("negativo", sobraBobeira < 0);
   elStatusLivre.textContent =
-    livre < 0
-      ? "suas contas passaram do salário"
+    sobraBobeira < 0
+      ? "passou do orçamento de bobeira"
       : "pra gastar sem culpa esse mês";
 
   const pctPago = estado.salario > 0 ? Math.min(100, (totalPago / estado.salario) * 100) : 0;
@@ -122,6 +135,12 @@ function render() {
     <div class="seg-pago" style="width:${pctPago}%"></div>
     <div class="seg-pendente" style="width:${pctPendente}%"></div>
   `;
+
+  const pctBobeira =
+    orcamentoBobeira > 0 ? Math.min(100, (totalAvulso / orcamentoBobeira) * 100) : totalAvulso > 0 ? 100 : 0;
+  const excedeuBobeira = totalAvulso > orcamentoBobeira;
+  elBarraBobeira.innerHTML = `<div class="seg-bobeira${excedeuBobeira ? " excedido" : ""}" style="width:${pctBobeira}%"></div>`;
+  elBobeiraValores.textContent = `${formatarMoeda(totalAvulso)} de ${formatarMoeda(Math.max(0, orcamentoBobeira))}`;
 
   const gastosOrdenados = [...estado.gastos].sort((a, b) => {
     const diaA = a.dia ?? 32;
@@ -143,6 +162,9 @@ function render() {
     const parcela = gasto.nome.match(/^(\d+)\/(\d+)/);
     if (parcela && parcela[1] === parcela[2]) {
       metaPartes.push(`<span class="categoria-badge badge-fim">Última parcela</span>`);
+    }
+    if (ehAvulso(gasto)) {
+      metaPartes.push(`<span class="categoria-badge badge-avulso">Avulso</span>`);
     }
 
     li.innerHTML = `
@@ -172,7 +194,7 @@ function renderFuturos() {
       .filter((g) => temParcela(g.nome) || g.recorrente !== false);
 
     const totalFixoFuturo = itens.reduce((soma, g) => soma + g.valor, 0);
-    const livreFuturo = estado.salario - totalFixoFuturo;
+    const livreFuturo = estado.salario - totalFixoFuturo - estado.metaEconomia;
 
     const details = document.createElement("details");
     details.className = "futuro-mes";
@@ -214,6 +236,13 @@ function escapeHtml(texto) {
 elSalario.addEventListener("change", () => {
   const valor = parseFloat(elSalario.value);
   estado.salario = isNaN(valor) ? 0 : valor;
+  salvarEstado();
+  render();
+});
+
+elMeta.addEventListener("change", () => {
+  const valor = parseFloat(elMeta.value);
+  estado.metaEconomia = isNaN(valor) ? 0 : valor;
   salvarEstado();
   render();
 });

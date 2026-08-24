@@ -41,14 +41,22 @@
       </div>
     </div>
 
+    <div class="card card-meta">
+      <span class="card-label">Meta de economia</span>
+      <div class="salario-edit">
+        <span class="prefixo numero">R$</span>
+        <input type="number" class="numero" id="inputMeta" step="0.01" inputmode="decimal">
+      </div>
+    </div>
+
     <div class="card card-fixo">
-      <span class="card-label">Contas do mês</span>
+      <span class="card-label">Contas fixas</span>
       <span class="card-valor numero" id="totalFixo">R$ 0,00</span>
       <span class="card-sub" id="percentComprometido">0% do salário</span>
     </div>
 
     <div class="card card-livre" id="cardLivre">
-      <span class="card-label">Livre pra bobeira</span>
+      <span class="card-label">Sobra pra bobeira</span>
       <span class="card-valor numero" id="totalLivre">R$ 0,00</span>
       <span class="card-sub" id="statusLivre"></span>
     </div>
@@ -63,6 +71,17 @@
       <span><i class="dot dot-pendente"></i>A pagar</span>
       <span><i class="dot dot-livre"></i>Livre</span>
     </div>
+  </div>
+
+  <div class="barra-wrap">
+    <div class="bobeira-cabecalho">
+      <span class="card-label">Orçamento pra bobeira</span>
+      <span class="numero bobeira-valores" id="bobeiraValores"></span>
+    </div>
+    <div class="barra-fundo">
+      <div class="barra-progresso" id="barraBobeira"></div>
+    </div>
+    <p class="bobeira-ajuda">Depois de separar as contas fixas e a meta de economia, isso aqui é o que sobra pra gastar sem culpa — e o que você já gastou em compras avulsas (fatura, mercado, etc.) esse mês.</p>
   </div>
 
   <section class="lista-header">

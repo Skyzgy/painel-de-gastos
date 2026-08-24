@@ -89,9 +89,15 @@ body {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
-.card-salario { grid-column: 1 / -1; flex-direction: row; align-items: center; justify-content: space-between; }
+.card-salario,
+.card-meta {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
 
 .card-label {
   font-size: 0.75rem;
@@ -101,8 +107,9 @@ body {
 }
 
 .card-valor {
-  font-size: 1.4rem;
+  font-size: 1.15rem;
   font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .card-sub {
@@ -121,17 +128,17 @@ body {
   font-weight: 600;
 }
 
-#inputSalario {
+.salario-edit input {
   background: transparent;
   border: none;
   color: var(--texto);
-  font-size: 1.4rem;
+  font-size: 1.2rem;
   font-weight: 700;
-  width: 110px;
+  width: 90px;
   padding: 4px 0;
 }
 
-#inputSalario:focus {
+.salario-edit input:focus {
   outline: none;
   border-bottom: 2px solid var(--azul);
 }
@@ -177,6 +184,27 @@ body {
   font-size: 0.75rem;
   color: var(--texto-fraco);
 }
+
+.bobeira-cabecalho {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.bobeira-valores {
+  font-size: 0.85rem;
+  color: var(--texto-fraco);
+}
+
+.bobeira-ajuda {
+  margin: 8px 0 0;
+  font-size: 0.75rem;
+  color: var(--texto-fraco);
+}
+
+.barra-progresso .seg-bobeira { background: var(--verde); height: 100%; }
+.barra-progresso .seg-bobeira.excedido { background: var(--vermelho); }
 
 .dot {
   display: inline-block;
@@ -284,6 +312,11 @@ body {
 .badge-fim {
   background: var(--verde-fraco);
   color: var(--verde);
+}
+
+.badge-avulso {
+  background: rgba(240, 185, 61, 0.15);
+  color: var(--amarelo);
 }
 
 .item-valor {
