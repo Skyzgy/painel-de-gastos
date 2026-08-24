@@ -168,7 +168,8 @@ function renderFuturos() {
 
     const itens = estado.gastos
       .map((g) => ({ ...g, proj: projetarGasto(g.nome, passos) }))
-      .filter((g) => !g.proj.acabou);
+      .filter((g) => !g.proj.acabou)
+      .filter((g) => temParcela(g.nome) || g.recorrente !== false);
 
     const totalFixoFuturo = itens.reduce((soma, g) => soma + g.valor, 0);
     const livreFuturo = estado.salario - totalFixoFuturo;
@@ -416,11 +417,8 @@ function parsearExtratoNubank(texto) {
   return lancamentos;
 }
 
-const modalExtratoFundo = document.getElementById("modalExtratoFundo");
-const listaExtrato = document.getElementById("listaExtrato");
-const extratoVazio = document.getElementById("extratoVazio");
 const inputExtrato = document.getElementById("inputExtrato");
-let lancamentosExtrato = [];
+const temParcela = (nome) => /^(\d+)\/(\d+)/.test(nome);
 
 document.getElementById("btnImportarExtrato").addEventListener("click", () => inputExtrato.click());
 
@@ -429,57 +427,30 @@ inputExtrato.addEventListener("change", () => {
   if (!arquivo) return;
   const leitor = new FileReader();
   leitor.onload = () => {
-    lancamentosExtrato = parsearExtratoNubank(leitor.result);
-    renderExtrato();
-    modalExtratoFundo.classList.add("ativo");
+    const lancamentos = parsearExtratoNubank(leitor.result);
+    for (const l of lancamentos) {
+      estado.gastos.push({
+        id: gerarId(),
+        nome: l.nome,
+        valor: l.valor,
+        dia: l.dia,
+        categoria: "outros",
+        pago: false,
+        // so parcelas (N/M) continuam aparecendo nos proximos meses; compras
+        // avulsas da fatura contam so no mes em que entraram.
+        recorrente: temParcela(l.nome),
+      });
+    }
+    salvarEstado();
+    render();
+    alert(
+      lancamentos.length
+        ? `${lancamentos.length} lançamento(s) importado(s).`
+        : "Não consegui identificar lançamentos nesse arquivo. Confirme se é um CSV exportado do Nubank (conta ou fatura do cartão)."
+    );
   };
   leitor.readAsText(arquivo, "utf-8");
   inputExtrato.value = "";
-});
-
-function renderExtrato() {
-  listaExtrato.innerHTML = "";
-  extratoVazio.hidden = lancamentosExtrato.length > 0;
-
-  lancamentosExtrato.forEach((l, i) => {
-    const li = document.createElement("li");
-    li.className = "extrato-item";
-    li.innerHTML = `
-      <label class="extrato-linha">
-        <input type="checkbox" data-idx="${i}">
-        <span class="extrato-nome">${escapeHtml(l.nome)}</span>
-        <span class="extrato-valor numero">${formatarMoeda(l.valor)}</span>
-      </label>
-    `;
-    listaExtrato.appendChild(li);
-  });
-}
-
-document.getElementById("btnCancelarExtrato").addEventListener("click", () => {
-  modalExtratoFundo.classList.remove("ativo");
-  lancamentosExtrato = [];
-});
-modalExtratoFundo.addEventListener("click", (e) => {
-  if (e.target === modalExtratoFundo) modalExtratoFundo.classList.remove("ativo");
-});
-
-document.getElementById("btnConfirmarExtrato").addEventListener("click", () => {
-  const marcados = listaExtrato.querySelectorAll("input[type=checkbox]:checked");
-  marcados.forEach((chk) => {
-    const l = lancamentosExtrato[parseInt(chk.dataset.idx, 10)];
-    estado.gastos.push({
-      id: gerarId(),
-      nome: l.nome,
-      valor: l.valor,
-      dia: l.dia,
-      categoria: "outros",
-      pago: false,
-    });
-  });
-  salvarEstado();
-  render();
-  modalExtratoFundo.classList.remove("ativo");
-  lancamentosExtrato = [];
 });
 
 // --- virar o mês ---
