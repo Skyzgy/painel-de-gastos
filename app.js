@@ -328,6 +328,142 @@ inputImportar.addEventListener("change", () => {
   inputImportar.value = "";
 });
 
+// --- importar extrato do Nubank (CSV) ---
+function dividirLinhaCsv(linha) {
+  const campos = [];
+  let atual = "";
+  let dentroDeAspas = false;
+  for (let i = 0; i < linha.length; i++) {
+    const c = linha[i];
+    if (c === '"') {
+      dentroDeAspas = !dentroDeAspas;
+    } else if (c === "," && !dentroDeAspas) {
+      campos.push(atual);
+      atual = "";
+    } else {
+      atual += c;
+    }
+  }
+  campos.push(atual);
+  return campos.map((c) => c.trim());
+}
+
+function extrairDia(dataStr) {
+  const isoMatch = dataStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) return parseInt(isoMatch[3], 10);
+  const brMatch = dataStr.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (brMatch) return parseInt(brMatch[1], 10);
+  return null;
+}
+
+// Reconhece os dois formatos de extrato exportados pelo Nubank: conta
+// (Data,Valor,Identificador,Descrição) e fatura do cartão (date,title,amount).
+function parsearExtratoNubank(texto) {
+  const linhas = texto.split(/\r?\n/).filter((l) => l.trim().length > 0);
+  if (linhas.length < 2) return [];
+
+  const cabecalho = dividirLinhaCsv(linhas[0]).map((c) => c.toLowerCase());
+  const lancamentos = [];
+
+  if (cabecalho.includes("identificador") || cabecalho.includes("descrição") || cabecalho.includes("descricao")) {
+    const idxData = cabecalho.indexOf("data");
+    const idxValor = cabecalho.indexOf("valor");
+    const idxDescricao = cabecalho.findIndex((c) => c.startsWith("descri"));
+    for (const linha of linhas.slice(1)) {
+      const campos = dividirLinhaCsv(linha);
+      const valor = parseFloat(campos[idxValor]);
+      if (isNaN(valor) || valor >= 0) continue;
+      lancamentos.push({
+        nome: campos[idxDescricao] || "Lançamento",
+        valor: Math.abs(valor),
+        dia: extrairDia(campos[idxData] || ""),
+      });
+    }
+  } else if (cabecalho.includes("title") && cabecalho.includes("amount")) {
+    const idxDate = cabecalho.indexOf("date");
+    const idxTitle = cabecalho.indexOf("title");
+    const idxAmount = cabecalho.indexOf("amount");
+    for (const linha of linhas.slice(1)) {
+      const campos = dividirLinhaCsv(linha);
+      const valor = parseFloat(campos[idxAmount]);
+      if (isNaN(valor) || valor <= 0) continue;
+      lancamentos.push({
+        nome: campos[idxTitle] || "Lançamento",
+        valor,
+        dia: extrairDia(campos[idxDate] || ""),
+      });
+    }
+  }
+
+  return lancamentos;
+}
+
+const modalExtratoFundo = document.getElementById("modalExtratoFundo");
+const listaExtrato = document.getElementById("listaExtrato");
+const extratoVazio = document.getElementById("extratoVazio");
+const inputExtrato = document.getElementById("inputExtrato");
+let lancamentosExtrato = [];
+
+document.getElementById("btnImportarExtrato").addEventListener("click", () => inputExtrato.click());
+
+inputExtrato.addEventListener("change", () => {
+  const arquivo = inputExtrato.files[0];
+  if (!arquivo) return;
+  const leitor = new FileReader();
+  leitor.onload = () => {
+    lancamentosExtrato = parsearExtratoNubank(leitor.result);
+    renderExtrato();
+    modalExtratoFundo.classList.add("ativo");
+  };
+  leitor.readAsText(arquivo, "utf-8");
+  inputExtrato.value = "";
+});
+
+function renderExtrato() {
+  listaExtrato.innerHTML = "";
+  extratoVazio.hidden = lancamentosExtrato.length > 0;
+
+  lancamentosExtrato.forEach((l, i) => {
+    const li = document.createElement("li");
+    li.className = "extrato-item";
+    li.innerHTML = `
+      <label class="extrato-linha">
+        <input type="checkbox" data-idx="${i}">
+        <span class="extrato-nome">${escapeHtml(l.nome)}</span>
+        <span class="extrato-valor numero">${formatarMoeda(l.valor)}</span>
+      </label>
+    `;
+    listaExtrato.appendChild(li);
+  });
+}
+
+document.getElementById("btnCancelarExtrato").addEventListener("click", () => {
+  modalExtratoFundo.classList.remove("ativo");
+  lancamentosExtrato = [];
+});
+modalExtratoFundo.addEventListener("click", (e) => {
+  if (e.target === modalExtratoFundo) modalExtratoFundo.classList.remove("ativo");
+});
+
+document.getElementById("btnConfirmarExtrato").addEventListener("click", () => {
+  const marcados = listaExtrato.querySelectorAll("input[type=checkbox]:checked");
+  marcados.forEach((chk) => {
+    const l = lancamentosExtrato[parseInt(chk.dataset.idx, 10)];
+    estado.gastos.push({
+      id: gerarId(),
+      nome: l.nome,
+      valor: l.valor,
+      dia: l.dia,
+      categoria: "outros",
+      pago: false,
+    });
+  });
+  salvarEstado();
+  render();
+  modalExtratoFundo.classList.remove("ativo");
+  lancamentosExtrato = [];
+});
+
 // --- virar o mês ---
 document.getElementById("btnAvancarMes").addEventListener("click", () => {
   const proximo = new Date(estado.periodo.ano, estado.periodo.mes + 1, 1);
